@@ -8,6 +8,8 @@ services:
       - "8000:8000"
     volumes:
       - ./ProjectA:/app
+    depends_on:
+      - redis
 
   projectb:
     build:
@@ -16,3 +18,34 @@ services:
       - "8001:8001"
     volumes:
       - ./ProjectB:/app
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+
+  celery-worker:
+    build:
+      context: ./ProjectA
+    command: celery -A ProjectA worker -l info
+    volumes:
+      - ./ProjectA:/app
+    depends_on:
+      - redis
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+
+  celery-beat:
+    build:
+      context: ./ProjectA
+    command: celery -A ProjectA beat -l info
+    volumes:
+      - ./ProjectA:/app
+    depends_on:
+      - redis
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
